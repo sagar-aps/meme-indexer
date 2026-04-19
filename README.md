@@ -2,7 +2,7 @@
 
 Persistent host-side meme indexing for later OpenClaw integration.
 
-The project scans one or more filesystem roots, extracts OCR text from images and the first frame of videos, stores metadata in SQLite, and exposes a CLI for indexing, search, status, and error inspection.
+The project scans one or more filesystem roots, extracts OCR text from images and the first frame of videos, stores metadata in SQLite, and exposes a CLI for indexing, search, status, error inspection, and MCP serving.
 
 ## Features
 
@@ -76,6 +76,24 @@ Optional flags:
 ./run.sh status --format text
 ./run.sh errors --limit 10 --format text
 ```
+
+## MCP server
+
+The project includes a FastMCP server in `meme_indexer.mcp_server` that exposes the indexed meme library to MCP clients without installing anything into OpenClaw.
+
+Run it with the project venv:
+
+```bash
+cd /home/sagar_ap/homelab/meme-indexer
+./.venv/bin/python -m meme_indexer.mcp_server
+```
+
+Exposed MCP tools:
+
+- `search_memes(query: str, limit: int = 5)`
+- `meme_index_status()`
+- `meme_index_errors(limit: int = 20)`
+- `trigger_index()`
 
 ## Search output
 
