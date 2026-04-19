@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import logging
+import os
 import threading
 from typing import Any
 
@@ -14,18 +15,24 @@ from .search import search_records
 from .status import error_payload, status_payload
 
 LOGGER = logging.getLogger(__name__)
-MCP = FastMCP("meme-indexer")
+mcp = FastMCP("meme-indexer")
+MCP = mcp
 _INDEX_LOCK = threading.Lock()
 
 
+def _load_app_config():
+    config_path = os.getenv("MEME_INDEXER_CONFIG")
+    return load_config(config_path or default_config_path())
+
+
 def _open_db() -> Database:
-    config = load_config(default_config_path())
+    config = _load_app_config()
     db = Database(config.db_path)
     db.initialize()
     return db
 
 
-@MCP.tool
+@mcp.tool
 def search_memes(query: str, limit: int = 5) -> dict[str, Any]:
     """Search indexed memes and return compact structured results."""
     db = _open_db()
@@ -49,7 +56,7 @@ def search_memes(query: str, limit: int = 5) -> dict[str, Any]:
         db.close()
 
 
-@MCP.tool
+@mcp.tool
 def meme_index_status() -> dict[str, Any]:
     """Return the latest durable indexing status."""
     db = _open_db()
@@ -59,7 +66,7 @@ def meme_index_status() -> dict[str, Any]:
         db.close()
 
 
-@MCP.tool
+@mcp.tool
 def meme_index_errors(limit: int = 20) -> dict[str, Any]:
     """List files that failed indexing."""
     db = _open_db()
@@ -69,7 +76,7 @@ def meme_index_errors(limit: int = 20) -> dict[str, Any]:
         db.close()
 
 
-@MCP.tool
+@mcp.tool
 def trigger_index() -> dict[str, Any]:
     """Run an in-process indexing pass using the existing meme-indexer code."""
     if not _INDEX_LOCK.acquire(blocking=False):
@@ -80,7 +87,7 @@ def trigger_index() -> dict[str, Any]:
         }
 
     try:
-        config = load_config(default_config_path())
+        config = _load_app_config()
         db = Database(config.db_path)
         db.initialize()
         try:
@@ -101,7 +108,7 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    MCP.run()
+    mcp.run(show_banner=False)
 
 
 if __name__ == "__main__":
