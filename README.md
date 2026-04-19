@@ -98,6 +98,7 @@ Exposed MCP tools:
 ## Docker deployment
 
 The repo also includes a persistent Docker deployment for the MCP server.
+The container uses the project’s existing `.venv` mounted from the host and does not install the Python app into the image.
 
 Build and start it:
 
@@ -114,8 +115,7 @@ docker compose logs -f meme-indexer-mcp
 
 The container runs FastMCP over `streamable-http` on port `8000` and mounts:
 
-- `./config.toml` at `/app/config.toml`
-- `./state` at `/app/state`
+- the entire project at `/app`
 - `/mnt/nas-data/homes/sagar_ap/Memes` read-only at the same path in-container
 
 Stop it without removing state:
