@@ -1,0 +1,9 @@
+[index]
+source_paths = [
+  "/mnt/nas-data/homes/sagar_ap/Memes",
+]
+db_path = "state/meme-index.db"
+ocr_language = "eng"
+max_ocr_seconds = 3600
+video_frame_offset_seconds = 1.0
+video_extract_timeout_seconds = 120
