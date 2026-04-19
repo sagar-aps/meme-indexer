@@ -95,6 +95,35 @@ Exposed MCP tools:
 - `meme_index_errors(limit: int = 20)`
 - `trigger_index()`
 
+## Docker deployment
+
+The repo also includes a persistent Docker deployment for the MCP server.
+
+Build and start it:
+
+```bash
+cd /home/sagar_ap/homelab/meme-indexer
+docker compose up -d --build
+```
+
+Inspect logs:
+
+```bash
+docker compose logs -f meme-indexer-mcp
+```
+
+The container runs FastMCP over `streamable-http` on port `8000` and mounts:
+
+- `./config.toml` at `/app/config.toml`
+- `./state` at `/app/state`
+- `/mnt/nas-data/homes/sagar_ap/Memes` read-only at the same path in-container
+
+Stop it without removing state:
+
+```bash
+docker compose stop meme-indexer-mcp
+```
+
 ## Search output
 
 `search` returns JSON by default. Each result includes:
