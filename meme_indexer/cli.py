@@ -9,7 +9,7 @@ from typing import Any
 
 from tqdm import tqdm
 
-from .config import load_config
+from .config import default_config_path, load_config
 from .database import Database
 from .indexer import run_index
 from .search import search_records
@@ -17,11 +17,10 @@ from .status import error_payload, status_payload
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    default_config = Path(__file__).resolve().parent.parent / "config.toml"
     parser = argparse.ArgumentParser(prog="meme_indexer")
     parser.add_argument(
         "--config",
-        default=str(default_config),
+        default=str(default_config_path()),
         help="Path to config.toml",
     )
     parser.add_argument(

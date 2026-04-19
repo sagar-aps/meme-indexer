@@ -17,9 +17,13 @@ class AppConfig:
     video_extract_timeout_seconds: int
 
 
+def default_config_path() -> Path:
+    return Path(__file__).resolve().parent.parent / "config.toml"
+
+
 def load_config(config_path: str | Path | None = None) -> AppConfig:
     if config_path is None:
-        config_file = Path.cwd() / "config.toml"
+        config_file = default_config_path()
     else:
         config_file = Path(config_path).expanduser().resolve()
 
