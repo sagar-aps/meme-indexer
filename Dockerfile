@@ -11,6 +11,7 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg tesseract-ocr \
+    && ln -sf /usr/local/bin/python3 /usr/bin/python3 \
     && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8000
