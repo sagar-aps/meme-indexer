@@ -11,7 +11,14 @@ from typing import Protocol
 from .config import AppConfig
 from .database import Database
 from .media import DiscoveredFile, classify_path
-from .ocr import FileSkipped, OCRResult, ensure_external_dependencies, ocr_image, ocr_video_first_frame
+from .ocr import (
+    FileSkipped,
+    InvalidMediaError,
+    OCRResult,
+    ensure_external_dependencies,
+    ocr_image,
+    ocr_video_first_frame,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -202,6 +209,31 @@ def run_index(
                     duration_seconds=duration_seconds,
                 )
                 summary.skipped_files += 1
+            except InvalidMediaError as exc:
+                LOGGER.warning("Invalid media file %s: %s", file.path, exc)
+                duration_seconds = time.monotonic() - file_started_at
+                db.upsert_file(
+                    path=str(file.path),
+                    source_root=str(file.source_root),
+                    relative_path=file.relative_path,
+                    basename=file.basename,
+                    file_type=file.file_type,
+                    size_bytes=file.size_bytes,
+                    mtime_ns=file.mtime_ns,
+                    status="error",
+                    skip_reason=None,
+                    error_message=str(exc),
+                    ocr_text=None,
+                    ocr_language=config.ocr_language,
+                    media_width=None,
+                    media_height=None,
+                    video_duration_seconds=None,
+                    discovered_at=discovered_at,
+                    indexed_at=None,
+                    deleted_at=None,
+                    duration_seconds=duration_seconds,
+                )
+                summary.error_files += 1
             except Exception as exc:  # noqa: BLE001
                 LOGGER.exception("Failed to process %s", file.path)
                 duration_seconds = time.monotonic() - file_started_at

@@ -7,13 +7,17 @@ import subprocess
 import tempfile
 import time
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import pytesseract
 
 from .config import AppConfig
 
 
 class FileSkipped(Exception):
+    pass
+
+
+class InvalidMediaError(Exception):
     pass
 
 
@@ -53,17 +57,22 @@ def _remaining_seconds(started_at: float, limit_seconds: int) -> float:
 
 def ocr_image(path: Path, config: AppConfig) -> OCRResult:
     started_at = time.monotonic()
-    with Image.open(path) as image:
-        image.load()
-        width, height = image.size
-        remaining = _remaining_seconds(started_at, config.max_ocr_seconds)
-        if remaining <= 0:
-            raise FileSkipped("OCR time limit exceeded before image OCR started")
-        text = pytesseract.image_to_string(
-            image,
-            lang=config.ocr_language,
-            timeout=max(1, int(remaining)),
-        )
+    if path.stat().st_size == 0:
+        raise InvalidMediaError("Image file is empty (0 bytes)")
+    try:
+        with Image.open(path) as image:
+            image.load()
+            width, height = image.size
+            remaining = _remaining_seconds(started_at, config.max_ocr_seconds)
+            if remaining <= 0:
+                raise FileSkipped("OCR time limit exceeded before image OCR started")
+            text = pytesseract.image_to_string(
+                image,
+                lang=config.ocr_language,
+                timeout=max(1, int(remaining)),
+            )
+    except UnidentifiedImageError as exc:
+        raise InvalidMediaError("Image file is not a valid decodable image") from exc
     return OCRResult(
         text=_clean_text(text),
         width=width,
@@ -73,22 +82,30 @@ def ocr_image(path: Path, config: AppConfig) -> OCRResult:
 
 
 def _probe_video(path: Path, timeout_seconds: int) -> tuple[int | None, int | None, float | None]:
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-print_format",
-            "json",
-            "-show_streams",
-            "-show_format",
-            str(path),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=timeout_seconds,
-        check=True,
-    )
+    if path.stat().st_size == 0:
+        raise InvalidMediaError("Video file is empty (0 bytes)")
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-print_format",
+                "json",
+                "-show_streams",
+                "-show_format",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or exc.stdout or "").strip()
+        if detail:
+            raise InvalidMediaError(f"Video metadata probe failed: {detail}") from exc
+        raise InvalidMediaError("Video metadata probe failed") from exc
     payload = json.loads(result.stdout or "{}")
     streams = payload.get("streams", [])
     video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), {})
